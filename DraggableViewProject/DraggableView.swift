@@ -8,18 +8,28 @@
 
 import UIKit
 
-protocol DraggableViewDelegate: NSObjectProtocol {
+protocol DraggableViewDataSource: NSObjectProtocol {
   
   func draggableView(numberOfCardViewInDraggableView draggableView : DraggableView) -> Int
   func draggableView(configDraggableCardView cardView: DraggableCardView, viewContentAtIndex index: Int)
-  func draggableView(draggableView: DraggableView, resultIsInLeft isLeft: Bool, resultAtIndex index: Int)
-  func draggableViewAllRemoved(draggableView: DraggableView)
   
+}
+
+@objc protocol DraggableViewDelegate: NSObjectProtocol {
+  
+  optional func draggableView(draggableView: DraggableView, resultIsInLeft isLeft: Bool, resultAtIndex index: Int)
+  optional func draggableViewAllRemoved(draggableView: DraggableView)
+  optional func draggableViewWillDrag(draggableView: DraggableView, atIndex index: Int) -> Bool
+  //card即将显示在第一个，包括在没有card的时候创建新的和第二个移动到第一个两种情况
+  optional func draggableViewWillDisplay(draggableView: DraggableView, atIndex index: Int)
+
 }
 
 class DraggableView: UIView {
   
-  private weak var delegate: DraggableViewDelegate?
+  weak var delegate: DraggableViewDelegate?
+  private weak var dataSource: DraggableViewDataSource?
+
   //保存当前的cardView
   private var existCardViewList: [DraggableCardView] = []
   //保存当前存在的cardView的frame
@@ -32,6 +42,7 @@ class DraggableView: UIView {
   private(set) var currentIndex = 0
   //cardView总数
   private(set) var numberOfCards: Int!
+  private var needReload = false
   
   //展示出来的最大卡片数量，但是需要在最后放一个隐藏的card用于动画，所以实际存在的数量是displayMaxCount＋1，也就是existMaxCardCount
   var displayMaxCount = 3 {
@@ -48,17 +59,15 @@ class DraggableView: UIView {
   var draggable = true
   
   
-  init(frame: CGRect, delegate: DraggableViewDelegate) {
+  init(frame: CGRect, dataSource: DraggableViewDataSource) {
     
-    self.delegate = delegate
-    //    self.numberOfCards = numberOfCards
+    self.dataSource = dataSource
     super.init(frame: frame)
   }
   
-  init(delegate: DraggableViewDelegate) {
+  init(dataSource: DraggableViewDataSource) {
     
-    self.delegate = delegate
-    //    self.numberOfCards = numberOfCards
+    self.dataSource = dataSource
     super.init(frame: CGRectZero)
   }
   
@@ -79,47 +88,54 @@ class DraggableView: UIView {
   /**
    外部直接调用，向左移出
    */
-  func leftClickAction() {
+  func leftClickAction() { 
     
     guard !existCardViewList.isEmpty else { return }
     existCardViewList[0].clickMoveToLeft()
     
   }
   
-  func loadCards() {
+  //完全重置再重新加载
+  func reloadCards() {
     
     clearCardView()
     
-    numberOfCards = delegate?.draggableView(numberOfCardViewInDraggableView: self) ?? 0
+    loadNewCards()
     
-    let numOfCardToLoad = min(numberOfCards, existMaxCardCount)
+  }
+  
+  //在当前基础上加载
+  func loadNewCards() {
     
-    for _ in 0..<numOfCardToLoad {
-      
-      loadNextCard()
-    }
+    numberOfCards = dataSource?.draggableView(numberOfCardViewInDraggableView: self) ?? 0
+    loadNextCard()
+    
   }
   
   //加载下一个卡片
   private func loadNextCard() {
     
     guard numberOfLoadedCard < numberOfCards else { return }
+    guard existCardViewList.count < existMaxCardCount else { return }
     
-    let indexOfLoadCard = numberOfLoadedCard
+    let indexOfExistCard = existCardViewList.count
     
     //设置为最大的frame，用于布局
     let cardView = DraggableCardView(frame: getCardFrameAtShowingIndex(0), delegate: self)
     //第一个设为可拖拽
-    cardView.draggable = draggable == true ? indexOfLoadCard == 0 : false
-    delegate?.draggableView(configDraggableCardView: cardView, viewContentAtIndex: indexOfLoadCard)
-    //修改成适当的frame
-    cardView.frame = getCardFrameAtShowingIndex(min(indexOfLoadCard, existMaxCardCount - 1))
+    cardView.draggable = draggable == true ? indexOfExistCard == 0 : false
+    dataSource?.draggableView(configDraggableCardView: cardView, viewContentAtIndex: numberOfLoadedCard)
+    //修改成适当的frame,
+    cardView.frame = getCardFrameAtShowingIndex(indexOfExistCard)
     
-    if indexOfLoadCard == 0 {
+    if indexOfExistCard == 0 {
       addSubview(cardView)
     } else {
-      
       insertSubview(cardView, belowSubview: existCardViewList.last!)
+    }
+    
+    if indexOfExistCard == 0 {
+      delegate?.draggableViewWillDisplay?(self, atIndex: numberOfLoadedCard)
     }
     
     existCardViewList += [cardView]
@@ -130,7 +146,7 @@ class DraggableView: UIView {
       cardView.alpha = 0
     }
     
-    
+    loadNextCard()
   }
   
   //获取卡片frame
@@ -161,7 +177,7 @@ class DraggableView: UIView {
     
     if existCardViewList.isEmpty {
       
-      delegate?.draggableViewAllRemoved(self)
+      delegate?.draggableViewAllRemoved?(self)
       
     } else {
       
@@ -215,11 +231,20 @@ extension DraggableView: DraggableCardViewDelegate {
     
     cardView.removeFromSuperview()
     
-    delegate?.draggableView(self, resultIsInLeft: isLeft, resultAtIndex: currentIndex)
+    delegate?.draggableView?(self, resultIsInLeft: isLeft, resultAtIndex: currentIndex)
     
     cardViewDidDisappear()
     loadNextCard()
     
+    if !existCardViewList.isEmpty {
+      //currentIndex在cardViewDidDisappear已加1
+      delegate?.draggableViewWillDisplay?(self, atIndex: currentIndex)
+    }
+    
+  }
+  
+  func draggableCardViewWillDrag(cardView: DraggableCardView) -> Bool {
+    return delegate?.draggableViewWillDrag?(self, atIndex: currentIndex) ?? true
   }
   
 }

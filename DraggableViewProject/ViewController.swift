@@ -12,6 +12,8 @@ class ViewController: UIViewController {
 
   var draggableView: DraggableView!
   
+  var count = 5
+  
   override func viewDidLoad() {
     super.viewDidLoad()
 
@@ -19,7 +21,7 @@ class ViewController: UIViewController {
   }
 
   override func viewDidAppear(animated: Bool) {
-    draggableView.loadCards()
+    draggableView.reloadCards()
   }
   override func didReceiveMemoryWarning() {
     super.didReceiveMemoryWarning()
@@ -28,7 +30,11 @@ class ViewController: UIViewController {
 
 
   @IBAction func onClickRight() {
+    
     draggableView.rightClickAction()
+//    count += 5
+//    draggableView.loadNewCards()
+
   }
   
   @IBAction func onClickLeft() {
@@ -37,30 +43,31 @@ class ViewController: UIViewController {
   
   func setupUI() {
     
-    draggableView = DraggableView(delegate: self)
+    draggableView = DraggableView(dataSource: self)
+    draggableView.delegate = self
     view.addSubview(draggableView)
 
     draggableView.displayMaxCount = 3
     
     draggableView.snp_makeConstraints { (make) -> Void in
-      make.top.equalTo(view).offset(50)
+      make.top.equalTo(view).offset(80)
       make.left.equalTo(view).offset(40)
       make.right.equalTo(view).offset(-40)
       make.bottom.equalTo(view).offset(-150)
 
     }
-    
   }
+
 }
 
-extension ViewController: DraggableViewDelegate {
+extension ViewController: DraggableViewDataSource {
   
   func draggableView(numberOfCardViewInDraggableView draggableView: DraggableView) -> Int {
-    return 10
+    return count
   }
   
   func draggableView(configDraggableCardView cardView: DraggableCardView, viewContentAtIndex index: Int) {
-
+    
     cardView.layer.cornerRadius = 2
     cardView.layer.shadowRadius = 3
     cardView.layer.shadowOpacity = 0.2
@@ -116,6 +123,9 @@ extension ViewController: DraggableViewDelegate {
     areaLabel.text = "北京"
     
   }
+
+}
+extension ViewController: DraggableViewDelegate {
   
   func draggableView(cardView: DraggableView, resultIsInLeft isLeft: Bool, resultAtIndex index: Int) {
     
@@ -124,5 +134,15 @@ extension ViewController: DraggableViewDelegate {
   
   func draggableViewAllRemoved(draggableView: DraggableView) {
     print("all removed")
+  }
+  
+  func draggableViewWillDrag(draggableView: DraggableView, atIndex index: Int) -> Bool {
+    print("\(index) will drag")
+    
+    return true
+  }
+  
+  func draggableViewWillDisplay(draggableView: DraggableView, atIndex index: Int) {
+    print("\(index) will display")
   }
 }

@@ -12,6 +12,7 @@ protocol DraggableCardViewDelegate: NSObjectProtocol {
   
   func draggableCardView(cardView: DraggableCardView, draggingProgress progress: CGFloat)
   func draggableCardViewDidRemove(cardView: DraggableCardView, isLeft: Bool)
+  func draggableCardViewWillDrag(cardView: DraggableCardView) -> Bool
   
 }
 
@@ -28,8 +29,8 @@ class DraggableCardView: UIView {
   private var subViewOriginFontSizeDic: [Int: CGFloat] = [:]
   //保存view的最大宽度，用于实时缩放样式
   private static var maxWidth: CGFloat!
+  //进行动画的时候，不允许再次开始动画
   private var isAnimating = false
-  
   
   var originCenter: CGPoint!
   var touchOffsetPoint: CGPoint!
@@ -41,6 +42,8 @@ class DraggableCardView: UIView {
       if draggable {
         pan = UIPanGestureRecognizer(target: self, action: "onDragging:")
         addGestureRecognizer(pan)
+        
+        
       } else {
         guard pan != nil else { return }
         removeGestureRecognizer(pan)
@@ -98,6 +101,9 @@ class DraggableCardView: UIView {
   func clickMoveToRight() {
     
     guard !isAnimating else { return }
+    guard !isDragging() else { return }
+    
+    guard delegate?.draggableCardViewWillDrag(self) ?? true else { return }
     
     originCenter = center
     
@@ -122,6 +128,9 @@ class DraggableCardView: UIView {
   func clickMoveToLeft() {
     
     guard !isAnimating else { return }
+    guard !isDragging() else { return }
+    
+    guard delegate?.draggableCardViewWillDrag(self) ?? true else { return }
     
     originCenter = center
     
@@ -150,6 +159,7 @@ class DraggableCardView: UIView {
     case .Began:
       
       originCenter = self.center
+      
     case .Changed:
       
       center = CGPoint(x: originCenter.x + touchOffsetPoint.x, y: originCenter.y + touchOffsetPoint.y)
@@ -207,7 +217,7 @@ class DraggableCardView: UIView {
     startLoop()
     
     isAnimating = true
-    UIView.animateWithDuration(0.3, animations: { () -> Void in
+    UIView.animateWithDuration(0.3, delay: 0, options: .CurveEaseOut, animations: { () -> Void in
       
       self.center = finishPoint
       
@@ -217,6 +227,7 @@ class DraggableCardView: UIView {
         self.endLoop()
         self.displayLink.invalidate()
         self.delegate?.draggableCardViewDidRemove(self, isLeft: false)
+        
     }
   }
   
@@ -228,7 +239,7 @@ class DraggableCardView: UIView {
     startLoop()
     
     isAnimating = true
-    UIView.animateWithDuration(0.3, animations: { () -> Void in
+    UIView.animateWithDuration(0.3, delay: 0, options: .CurveEaseOut, animations: { () -> Void in
       
       self.center = finishPoint
       
@@ -323,7 +334,7 @@ class DraggableCardView: UIView {
       
       if let label = subview as? UILabel {
         let pointSize = subViewOriginFontSizeDic[subview.hash]! * scale
-        
+
         //减小字号的小数位，不然内存剧增而且无法释放
         label.font = UIFont.systemFontOfSize(CGFloat(CGFloat(Int(pointSize / 0.1)) * 0.1))
       }
@@ -341,4 +352,16 @@ class DraggableCardView: UIView {
     
   }
   
+  //是否正在拖拽
+  private func isDragging() -> Bool {
+    
+    return [.Began,.Changed].contains(pan.state)
+  }
+  
+}
+
+extension DraggableCardView: UIGestureRecognizerDelegate {
+  override func gestureRecognizerShouldBegin(gestureRecognizer: UIGestureRecognizer) -> Bool {
+    return delegate?.draggableCardViewWillDrag(self) ?? true
+  }
 }
