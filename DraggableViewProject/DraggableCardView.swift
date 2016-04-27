@@ -115,13 +115,13 @@ class DraggableCardView: UIView {
       self.transform = CGAffineTransformMakeRotation(self.maxRadian)
       self.center = CGPoint(x: self.getRightEndPointX(), y: self.center.y)
       
-      }) { _ in
-        
-        self.isAnimating = false
-        self.endLoop()
-        self.displayLink.invalidate()
-        self.delegate?.draggableCardViewDidRemove(self, isLeft: false)
-        
+    }) { _ in
+      
+      self.isAnimating = false
+      self.endLoop()
+      self.displayLink.invalidate()
+      self.delegate?.draggableCardViewDidRemove(self, isLeft: false)
+      
     }
   }
   
@@ -142,12 +142,12 @@ class DraggableCardView: UIView {
       self.transform = CGAffineTransformMakeRotation(-self.maxRadian)
       self.center = CGPoint(x: self.getLeftEndPointX(), y: self.center.y)
       
-      }) { _ in
-        
-        self.isAnimating = false
-        self.endLoop()
-        self.displayLink.invalidate()
-        self.delegate?.draggableCardViewDidRemove(self, isLeft: true)
+    }) { _ in
+      
+      self.isAnimating = false
+      self.endLoop()
+      self.displayLink.invalidate()
+      self.delegate?.draggableCardViewDidRemove(self, isLeft: true)
     }
   }
   
@@ -169,7 +169,7 @@ class DraggableCardView: UIView {
       
       delegate?.draggableCardView(self, draggingProgress: fabs(progress))
       
-    case .Ended:
+    case .Ended, .Cancelled:
       
       didEndDrag()
     default:
@@ -221,13 +221,13 @@ class DraggableCardView: UIView {
       
       self.center = finishPoint
       
-      }) { (finish) -> Void in
-        
-        self.isAnimating = false
-        self.endLoop()
-        self.displayLink.invalidate()
-        self.delegate?.draggableCardViewDidRemove(self, isLeft: false)
-        
+    }) { (finish) -> Void in
+      
+      self.isAnimating = false
+      self.endLoop()
+      self.displayLink.invalidate()
+      self.delegate?.draggableCardViewDidRemove(self, isLeft: false)
+      
     }
   }
   
@@ -243,13 +243,13 @@ class DraggableCardView: UIView {
       
       self.center = finishPoint
       
-      }) { (finish) -> Void in
-        
-        self.isAnimating = false
-        self.endLoop()
-        self.displayLink.invalidate()
-        self.delegate?.draggableCardViewDidRemove(self, isLeft: true)
-        
+    }) { (finish) -> Void in
+      
+      self.isAnimating = false
+      self.endLoop()
+      self.displayLink.invalidate()
+      self.delegate?.draggableCardViewDidRemove(self, isLeft: true)
+      
     }
   }
   
@@ -262,10 +262,10 @@ class DraggableCardView: UIView {
     UIView.animateWithDuration(0.3, animations: { () -> Void in
       self.center = self.originCenter
       self.transform = CGAffineTransformIdentity
-      }) { (finish) -> Void in
-        
-        self.isAnimating = false
-        self.endLoop()
+    }) { (finish) -> Void in
+      
+      self.isAnimating = false
+      self.endLoop()
     }
   }
   
@@ -332,12 +332,12 @@ class DraggableCardView: UIView {
       
       subview.frame = calculateFrameWith(subViewOriginFrameDic[subview.hash]!, scale: scale)
       
-      if let label = subview as? UILabel {
-        let pointSize = subViewOriginFontSizeDic[subview.hash]! * scale
-
-        //减小字号的小数位，不然内存剧增而且无法释放
-        label.font = UIFont.systemFontOfSize(CGFloat(CGFloat(Int(pointSize / 0.1)) * 0.1))
-      }
+      //      if let label = subview as? UILabel {
+      //        let pointSize = subViewOriginFontSizeDic[subview.hash]! * scale
+      //
+      //        //减小字号的小数位，不然内存剧增而且无法释放
+      //        label.font = UIFont.systemFontOfSize(CGFloat(CGFloat(Int(pointSize / 0.1)) * 0.1))
+      //      }
       
     }
   }
